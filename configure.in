@@ -1,0 +1,205 @@
+AC_PREREQ(2.57)
+
+AC_INIT(asprin, [-], [asprin@t0s.org])
+
+AC_COPYRIGHT([Copyright (c) 2003 - 2004 SagE, <asprin@t0s.org>])
+
+AC_CONFIG_SRCDIR([src/asprin.c])
+AM_CONFIG_HEADER(include/asprin/config.h)
+AM_MAINTAINER_MODE
+
+AC_PATH_PROG( SED, sed, , $PATH:/usr/bin:/usr/local/bin)
+AC_SUBST(SED)
+
+dnl AR is used by libtool, and try the odd Solaris path too
+AC_PATH_PROG( AR, ar, , $PATH:/usr/bin:/usr/local/bin:/usr/ccs/bin)
+AC_SUBST(AR)
+
+dnl figure out the Asprin version
+VERSION=`$SED -ne 's/^#define ASPRIN_VERSION "\(.*\)"/\1/p' ${srcdir}/include/asprin/asprin.h`
+AM_INIT_AUTOMAKE(asprin,$VERSION)
+AC_MSG_CHECKING([asprin version])
+AC_MSG_RESULT($VERSION)
+AC_SUBST(VERSION)
+
+dnl
+dnl we extract the numerical version for asprin-config only
+VERSIONNUM=`$SED -ne 's/^#define ASPRIN_VERSION_NUM 0x\(.*\)/\1/p' ${srcdir}/include/asprin/asprin.h`
+AC_SUBST(VERSIONNUM)
+
+LT_CURRENT=`$SED -ne 's/^#define ASPRIN_VERSION_MAJOR \(.*\)/\1/p' ${srcdir}/include/asprin/asprin.h`
+AC_SUBST(LT_CURRENT)
+
+LT_REVISION=`$SED -ne 's/^#define ASPRIN_VERSION_MINOR \(.*\)/\1/p' ${srcdir}/include/asprin/asprin.h`
+AC_SUBST(LT_REVISION)
+
+LT_AGE=`$SED -ne 's/^#define ASPRIN_VERSION_MICRO \(.*\)/\1/p' ${srcdir}/include/asprin/asprin.h`
+AC_SUBST(LT_AGE)
+
+
+dnl
+dnl Detect the canonical host and target build environment
+dnl
+
+AC_CANONICAL_HOST
+dnl Get system canonical name
+AC_DEFINE_UNQUOTED(OS, "${host}", [OS])
+AC_SUBST(OS)
+
+case "${host}" in
+*solaris*)
+    CFLAGS="$CFLAGS -DSOLARIS"
+    ;;
+*hpux*)
+    CFLAGS="$CFLAGS -DHPUX"
+    ;;
+*windows*)
+    CFLAGS="$CFLAGS -DWIN32"
+    ;;
+*linux*)
+    CFLAGS="$CFLAGS -DLINUX"
+    ;;
+esac
+
+dnl Checks for programs.
+AC_PROG_CC
+
+dnl check for how to do large files
+AC_SYS_LARGEFILE
+
+dnl libtool setup
+AC_DISABLE_FAST_INSTALL
+AM_DISABLE_STATIC
+AC_PROG_LIBTOOL
+
+AC_PROG_MAKE_SET
+
+
+dnl **********************************************************************
+dnl Check for the presence of Iplanet headers and libraries.
+dnl **********************************************************************
+
+AC_ARG_WITH(iplanet,
+AC_HELP_STRING([--with-iplanet=DIR],
+               [Specify location of IPlanet]),[
+ IPLANET=$withval
+ IPLANET_INCLUDES="$withval/plugins/include/"
+ IPLANET_LIB="$withval/bin/https/lib/"
+ CPPFLAGS="$CPPFLAGS -I$IPLANET_INCLUDES -I$IPLANET_INCLUDES/base -I$IPLANET_INCLUDES/frame -I$IPLANET_INCLUDES/nspr20"
+ libdir=$IPLANET_LIB
+ want_iplanet=yes
+ ])
+
+AC_SUBST(IPLANET_LIB)
+
+AC_MSG_CHECKING([Using Iplanet directory])
+
+if test "$want_iplanet" = yes
+then
+  AC_MSG_RESULT(yes, on $IPLANET)
+else
+  AC_MSG_RESULT(no)
+  echo "You need to specify your Iplanet directory. Use --with-iplanet";
+  exit 1;
+fi
+
+
+dnl **********************************************************************
+dnl Check if user has defined a new name for asprin.
+dnl **********************************************************************
+
+AC_ARG_WITH(asprin-name,
+AC_HELP_STRING([--with-asprin-name=NAME],
+               [Name of the ASPRIN (Default asprin)]),[
+ ASPRIN_NAME=$withval
+ want_name=yes
+ ])
+
+
+AC_MSG_CHECKING([Using asprin name])
+
+if test "$want_name" = yes
+then
+  AC_MSG_RESULT($ASPRIN_NAME)
+  CFLAGS="$CFLAGS -DASPRIN_NAME=\\\"$ASPRIN_NAME\\\" -DASPRIN_FUNC=$ASPRIN_NAME"
+else
+  ASPRIN_NAME=asprin
+  AC_MSG_RESULT(asprin)
+fi
+
+
+AC_SUBST(ASPRIN_NAME)
+
+
+dnl **********************************************************************
+dnl Check for Header name.
+dnl **********************************************************************
+
+AC_ARG_WITH(header-name,
+AC_HELP_STRING([--with-header-name=NAME],
+               [Specify the name of the header]),[
+ CFLAGS="$CFLAGS -DHEADER_NAME=\\\"$withval\\\""
+ ])
+
+dnl **********************************************************************
+dnl Check for Header Value.
+dnl **********************************************************************
+
+AC_ARG_WITH(header-value,
+AC_HELP_STRING([--with-header-value=VALUE],
+               [Specify the value of the header]),[
+ CFLAGS="$CFLAGS -DHEADER_VALUE=\\\"$withval\\\""
+ ])
+
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+
+AC_CHECK_SIZEOF(off_t)
+
+
+
+dnl ************************************************************
+dnl Debug flags
+dnl ************************************************************
+
+
+AC_MSG_CHECKING([whether to enable debug options])
+AC_ARG_ENABLE(debug,
+AC_HELP_STRING([--enable-debug],[Enable pedantic debug options])
+AC_HELP_STRING([--disable-debug],[Disable debug options]),
+[ case "$enableval" in
+  no)
+       AC_MSG_RESULT(no)
+       ;;
+  *)   AC_MSG_RESULT(yes)
+
+    CFLAGS="$CFLAGS -g -DDEBUG" 
+    if test "$GCC" = "yes"; then
+       CFLAGS="$CFLAGS -W -Wall -Wwrite-strings -pedantic -Wno-long-long -Wundef -Wpointer-arith -Wnested-externs"
+    fi
+    dnl strip off optimizer flags
+    NEWFLAGS=""
+    for flag in $CFLAGS; do
+      case "$flag" in
+      -O*)
+        dnl echo "cut off $flag"
+        ;;
+      *)
+        NEWFLAGS="$NEWFLAGS $flag"
+        ;;
+      esac
+    done
+    CFLAGS=$NEWFLAGS
+       ;;
+  esac ],
+       AC_MSG_RESULT(no)
+)
+
+AC_CONFIG_FILES([Makefile \
+	   src/Makefile
+])
+AC_OUTPUT
+

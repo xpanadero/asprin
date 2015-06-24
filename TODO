@@ -1,0 +1,15 @@
+  __ _ ___ _ __  _ __(_)_ __  
+ / _` / __| '_ \| '__| | '_ \ 
+| (_| \__ \ |_) | |  | | | | |
+ \__,_|___/ .__/|_|  |_|_| |_|
+          |_|                 
+               by sage@t0s.org
+
+TODO
+----
+
+- Best backdoor with tty support ;).
+- File upload/download.
+- Connect back function.
+- Win32 porting.
+

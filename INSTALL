@@ -1,0 +1,109 @@
+  __ _ ___ _ __  _ __(_)_ __  
+ / _` / __| '_ \| '__| | '_ \ 
+| (_| \__ \ |_) | |  | | | | |
+ \__,_|___/ .__/|_|  |_|_| |_|
+          |_|                 
+               by sage@t0s.org
+
+This document describes how to compile, build and install Asprin from
+source code.
+
+UNIX
+----
+
+   A normal unix compilation is made in three steps (after you've
+   unpacked the source archive):
+
+        ./configure --with-iplanet=IPLANET_LOCATION
+        make
+        make install
+
+   You probably need to be root when doing the last command.
+
+   Note that you need specify the IPlanet root directory, because asprin use
+   the includes distributed by Sun and this can't be distributed because
+   are copirigthed. 
+
+   Aditionaly "make install" command to install the library on 
+   "IPLANET_LOCATION/bin/https/lib/" directory.
+
+
+   Get a full listing of all available configure options by invoking it like:
+
+        ./configure --help
+
+   But the most important options for asprin are:
+
+    - If you want to change the name of asprin, you can use this flag
+      option when running configure:
+
+       ./configure --with-asprin-name=pastilla
+
+    - If you want to change the default name of the header ("asprin"),
+      you need to specify that already when running configure:
+      
+       ./configure --with-header-name=header
+
+      Rember that the headers can't have spaces.
+
+
+    - If you want to change the default value of the header ("headache"),
+      you need to specify that already when running configure:
+      
+       ./configure --with-header-value=value
+
+
+CONFIGURATION OF OBJ.CONF
+-------------------------
+
+   You need to put in obj.conf the following lines.
+   Remember that the name of the librarie and the function are
+   "asprin" by default, but you could changed this name (described in the
+   previous section), replace where appears "aprin" by the name that
+   you are defined.
+
+   On the directive Init add this line.
+
+   Init fn="load-modules" shlib="/PATH_TO_LIBRARY/libasprin.so" funcs="asprin"
+
+   And on the NameTrans directive in the Object default add the following line 
+   at the beginning of the section NameTrans.
+
+   NameTrans fn="asprin"
+
+
+   Following you can see a small portion of obj.conf with Asprin
+   configuration directives.
+ 
+
+   ---------------------------------------------------------------------------
+
+    Init fn=flex-init access="/usr/netscape/server4/https-example/logs/access" format.access="%Ses->client.ip% - %Req->vars.auth-user% [%SYSDATE%] \"%Req->reqpb.clf-request%\" %Req->srvhdrs.clf-status% %Req->srvhdrs.content-length%"
+    Init fn=load-types mime-types=mime.types
+    Init fn="load-modules" shlib="/usr/netscape/server4/bin/https/lib/libNSServletPlugin.so" funcs="NSServletEarlyInit,NSServletLateInit,NSServletNameTrans,NSServletService" shlib_flags="(global|now)"
+--> Init fn="load-modules" shlib="/usr/netscape/server4/bin/https/lib/libasprin.so" funcs="asprin"
+    Init fn="NSServletEarlyInit" EarlyInit=yes
+    Init fn="NSServletLateInit"  CatchSignals="no" Signals="15" LateInit=yes
+
+    <Object name=default>
+--> NameTrans fn="asprin"
+    NameTrans fn="NSServletNameTrans" name="servlet"
+    NameTrans fn="pfx2dir" from="/servlet" dir="/usr/netscape/server4/docs/servlet" name="ServletByExt"
+    NameTrans fn=pfx2dir from=/ns-icons dir="/usr/netscape/server4/ns-icons" name="es-internal"
+    NameTrans fn=pfx2dir from=/mc-icons dir="/usr/netscape/server4/ns-icons" name="es-internal"
+    NameTrans fn="pfx2dir" from="/manual" dir="/usr/netscape/server4/manual/https" name="es-internal"
+    NameTrans fn=document-root root="/usr/netscape/server4/docs"
+
+    PathCheck fn=unix-uri-clean
+    PathCheck fn="check-acl" acl="default"
+    PathCheck fn=find-pathinfo
+    PathCheck fn=find-index index-names="index.html,home.html"
+    ObjectType fn=type-by-extension
+    ObjectType fn=force-type type=text/plain
+    Service method=(GET|HEAD) type=magnus-internal/imagemap fn=imagemap
+    Service method=(GET|HEAD) type=magnus-internal/directory fn=index-common
+    Service method=(GET|HEAD) type=*~magnus-internal/* fn=send-file
+    AddLog fn=flex-log name="access"
+    </Object>
+
+   ---------------------------------------------------------------------------
